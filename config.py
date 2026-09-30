@@ -30,7 +30,7 @@ class Config:
     AI_PROVIDER = os.environ.get("AI_PROVIDER", "groq")
 
     # ── İşletme Kimliği (System Prompt'un temeli) ───────────────────────────
-    BUSINESS_NAME = os.environ.get("BUSINESS_NAME", "ENDORAY")
+    BUSINESS_NAME = os.environ.get("BUSINESS_NAME", "NAVTERA")
     BUSINESS_CONTEXT = os.environ.get(
         "BUSINESS_CONTEXT",
         (
