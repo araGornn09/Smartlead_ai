@@ -10,7 +10,7 @@ Bu dosya DİREKT iş mantığı içermez. Sadece parçaları bir araya getirir.
 """
 
 import os
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from config import config_selector, Config
 from app.database import init_db
@@ -51,11 +51,15 @@ def create_app(config_name: str = None) -> Flask:
     from app.routes import api_bp
     app.register_blueprint(api_bp, url_prefix="/api")
 
-    # ── 6. Sağlık Kontrol Endpoint'i (Health Check) ──────────────────────────
+    # ── 6. Ana Sayfa ve Sağlık Kontrol Endpoint'leri ─────────────────────────
+    @app.route("/")
+    def root():
+        """Render linki açıldığında 404 yerine servis durumunu gösterir."""
+        return jsonify({"status": "SmartLead AI çalışıyor"}), 200
+
     @app.route("/health")
     def health_check():
         """Render / AWS / GCP'nin "uygulama ayakta mı?" sorusuna cevap verir."""
-        from flask import jsonify
-        return jsonify({"status": "ok", "service": "SmartLead AI"}), 200
+        return jsonify({"status": "ok"}), 200
 
     return app
