@@ -30,8 +30,14 @@ def sohbet():
             return jsonify({"basari": False, "hata": "Mesaj alanı zorunludur."}), 400
         
         mesaj = data.get('mesaj')
-        gecmis = data.get('gecmis', [])
-        
+        gecmis = temiz_gecmis(data.get('gecmis', []))
+
+        # Mesajda telefon varsa müşteriyi otomatik kaydet (dashboard'da görünsün)
+        try:
+            musteri_radari(str(mesaj))
+        except Exception as e:
+            current_app.logger.error(f"Lead kaydedilemedi: {e}")
+
         yanit = ai_service(mesaj, gecmis)
         return jsonify({"basari": True, "yanit": yanit}), 200
 
