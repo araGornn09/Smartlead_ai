@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Navtera Admin Paneli</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #0B1325; font-family: 'Montserrat', Arial, sans-serif; color: #F7F6F2; }
+        header {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px;
+            padding: 16px 24px; border-bottom: 1px solid rgba(168,124,42,0.4);
+        }
+        .brand { color: #F5D77F; font-family: 'Cinzel', serif; letter-spacing: 2px; font-size: 18px; }
+        .brand span { color: #cfcfcf; font-family: 'Montserrat', Arial, sans-serif; font-size: 12px; letter-spacing: 0; margin-left: 8px; }
+        .logout {
+            background: transparent; color: #F5D77F; border: 1px solid #A87C2A; border-radius: 8px;
+            padding: 7px 14px; cursor: pointer; font-size: 13px;
+        }
+        .logout:hover { background: #A87C2A; color: #0B1325; }
+        main { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+        .stat {
+            display: inline-block; background: #0e1830; border: 1px solid rgba(168,124,42,0.4);
+            border-radius: 12px; padding: 14px 20px; margin-bottom: 20px;
+        }
+        .stat b { display: block; color: #F5D77F; font-size: 26px; }
+        .stat small { color: #cfcfcf; font-size: 12px; }
+        .table-wrap { overflow-x: auto; border: 1px solid rgba(168,124,42,0.4); border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(168,124,42,0.15); vertical-align: top; }
+        th { background: #0e1830; color: #F5D77F; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+        td.msg { white-space: pre-wrap; max-width: 420px; color: #dcdcdc; }
+        td.date { white-space: nowrap; color: #cfcfcf; font-size: 13px; }
+        a { color: #F5D77F; }
+        .empty { padding: 40px; text-align: center; color: #cfcfcf; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">NAVTERA <span>Admin Paneli</span></div>
+        <form method="POST" action="{{ url_for('admin.logout') }}">
+            <button class="logout" type="submit">Çıkış Yap</button>
+        </form>
+    </header>
+    <main>
+        <div class="stat"><b>{{ leads|length }}</b><small>Toplam müşteri kaydı</small></div>
+        <div class="table-wrap">
+            {% if leads %}
+            <table>
+                <thead>
+                    <tr><th>#</th><th>İsim</th><th>Telefon</th><th>Mesaj</th><th>Kayıt Tarihi</th></tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads %}
+                    <tr>
+                        <td>{{ lead.id }}</td>
+                        <td>{{ lead.name }}</td>
+                        <td><a href="tel:{{ lead.phone }}">{{ lead.phone }}</a></td>
+                        <td class="msg">{{ lead.message or '-' }}</td>
+                        <td class="date">{{ lead.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="empty">Henüz müşteri kaydı yok.</div>
+            {% endif %}
+        </div>
+    </main>
+</body>
+</html>

@@ -6,6 +6,7 @@ Hiçbir kod dosyası doğrudan os.environ okumaz; hepsi bu sınıfı kullanır.
 """
 
 import os
+from datetime import timedelta
 from dotenv import load_dotenv
 
 # .env dosyasını yükle
@@ -53,6 +54,19 @@ Ton: Sakin, özgüvenli, misafir odaklı, net ve abartısız. Türkçe konuş.""
         ),
     )
 
+    # ── Admin Paneli Girişi ─────────────────────────────────────────────────
+    # Şifre koda yazılmaz; Render > Environment kısmından tanımlanır.
+    # ADMIN_PASSWORD boşsa admin girişi tamamen kapalıdır.
+    ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+    # Opsiyonel: Wix backend'i /api/leads'i bu anahtarla (X-API-Key header) çekebilir
+    ADMIN_API_KEY = os.environ.get("ADMIN_API_KEY", "")
+
+    # Oturum çerezi güvenliği
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=8)  # 8 saat sonra tekrar giriş gerekir
+
     # ── CORS İzin Verilen Kaynaklar ──────────────────────────────────────────
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "*")
 
@@ -67,6 +81,7 @@ class ProductionConfig(Config):
     """Production ortamı — debug kapalı, güvenlik maksimum."""
     DEBUG = False
     TESTING = False
+    SESSION_COOKIE_SECURE = True  # Oturum çerezi sadece HTTPS üzerinden gönderilir
 
 
 class TestingConfig(Config):

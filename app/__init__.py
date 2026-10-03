@@ -51,6 +51,9 @@ def create_app(config_name: str = None) -> Flask:
     from app.routes import api_bp
     app.register_blueprint(api_bp, url_prefix="/api")
 
+    from app.admin import admin_bp
+    app.register_blueprint(admin_bp, url_prefix="/admin")
+
     # ── 6. Ana Sayfa ve Sağlık Kontrol Endpoint'leri ─────────────────────────
     @app.route("/")
     def root():

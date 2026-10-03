@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, render_template
 from app.database import save_lead, get_all_leads
 from app.services.ai_service import ai_service, AIServiceError
+from app.auth import api_admin_required
 
 # Blueprint tanımlamaları (Hatanın çözümü buradaki isimlerdir)
 api_bp = Blueprint('api', __name__)
@@ -61,6 +62,7 @@ def yeni_lead():
 
 
 @api_bp.route('/leads', methods=['GET'])
+@api_admin_required
 def leads_listele():
     try:
         kayitlar = get_all_leads(current_app)
