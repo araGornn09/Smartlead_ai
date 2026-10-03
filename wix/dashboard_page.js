@@ -1,14 +1,18 @@
 // WIX SAYFA KODU — Dashboard sayfası > Sayfa Kodu: içindekileri tamamen sil, bunu yapıştır.
-// Rezervasyon (Wix CMS) + chatbot kayıtları (Render / Smartlead_ai API) aynı listede,
-// iletişim mesajları (Wix CMS) ayrı listede gösterilir.
+//
+// Giriş için sayfada olması gereken elemanlar (ID'leri):
+//   #sifreInput   → Metin girişi (şifre yazılacak kutu)
+//   #girisButton  → Buton ("Giriş Yap")
+//   #girisHata    → Metin (hata mesajı için, boş bırakılabilir)
 
-import wixData from 'wix-data';
 import { getDashboardData } from 'backend/dashboard.web';
 
-const KOLEKSIYON = "Rezervasyon";
-const ILETISIM_KOLEKSIYON = "Iletisim"; // ⚠️ CMS'teki Koleksiyon ID'si
+$w.onReady(function () {
+    // Giriş yapılana kadar listeler gizli
+    $w("#repeaterLeads").collapse();
+    $w("#repeaterIletisim").collapse();
+    $w("#girisHata").text = "";
 
-$w.onReady(async function () {
     // ---------- REZERVASYONLAR ----------
     $w("#repeaterLeads").onItemReady(($item, itemData) => {
         $item("#txtIsim").text = itemData.isim || "İsim Bulunamadı";
@@ -25,54 +29,64 @@ $w.onReady(async function () {
         $item("#txtIletisimMesaj").text = itemData.mesaj || "Mesaj Yok";
     });
 
-    const [wixKayitlar, apiKayitlar, iletisimKayitlar] = await Promise.all([
-        wixRezervasyonlari(), apiLeadleri(), iletisimMesajlari()
-    ]);
+    // ---------- GİRİŞ ----------
+    $w("#girisButton").onClick(() => girisYap());
+    $w("#sifreInput").onKeyPress((event) => {
+        if (event.key === "Enter") girisYap();
+    });
+});
 
-    const hepsi = [...wixKayitlar, ...apiKayitlar];
+async function girisYap() {
+    const sifre = $w("#sifreInput").value;
+    if (!sifre) {
+        $w("#girisHata").text = "Lütfen şifreyi girin.";
+        return;
+    }
+
+    $w("#girisButton").disable();
+    $w("#girisHata").text = "Kontrol ediliyor...";
+
+    try {
+        const sonuc = await getDashboardData(sifre);
+
+        if (!sonuc.basari) {
+            $w("#girisHata").text = "Şifre hatalı.";
+            return;
+        }
+
+        $w("#girisHata").text = "";
+        $w("#sifreInput").collapse();
+        $w("#girisButton").collapse();
+        verileriGoster(sonuc);
+    } catch (err) {
+        console.log("Giriş hatası:", err);
+        $w("#girisHata").text = "Bir hata oluştu, tekrar deneyin.";
+    } finally {
+        $w("#girisButton").enable();
+    }
+}
+
+function verileriGoster(sonuc) {
+    // Rezervasyonlar (Wix CMS) + chatbot kayıtları (Render API) aynı listede
+    const hepsi = [
+        ...sonuc.rezervasyonlar.map(normalize),
+        ...sonuc.chatbot.map(l => normalize({ ...l, _id: "api-" + l._id }))
+    ];
     console.log("Toplam rezervasyon:", hepsi.length);
     if (hepsi.length > 0) {
         $w("#repeaterLeads").data = hepsi;
         $w("#repeaterLeads").expand();
-    } else {
-        $w("#repeaterLeads").collapse();
     }
 
+    const iletisimKayitlar = sonuc.iletisim.map(iletisimNormalize);
     console.log("Toplam iletişim mesajı:", iletisimKayitlar.length);
     if (iletisimKayitlar.length > 0) {
         $w("#repeaterIletisim").data = iletisimKayitlar;
         $w("#repeaterIletisim").expand();
-    } else {
-        $w("#repeaterIletisim").collapse();
     }
-});
+}
 
 // ================= REZERVASYON =================
-
-async function wixRezervasyonlari() {
-    try {
-        const sonuc = await wixData.query(KOLEKSIYON)
-            .descending("_createdDate")
-            .limit(100)
-            .find();
-        return sonuc.items.map(normalize);
-    } catch (err) {
-        console.log("Rezervasyon koleksiyon hatası:", err);
-        return [];
-    }
-}
-
-// Chatbot kayıtları: Render'daki Python API'sinden (/api/dashboard) JSON olarak gelir.
-// İstek Wix backend'inden (backend/dashboard.web.js) gizli anahtarla atılır.
-async function apiLeadleri() {
-    try {
-        const kayitlar = await getDashboardData();
-        return (kayitlar || []).map(l => normalize({ ...l, _id: "api-" + l._id }));
-    } catch (err) {
-        console.log("API Hatası:", err);
-        return [];
-    }
-}
 
 function normalize(k) {
     const tarih = k.tarih || k.date || k._createdDate;
@@ -97,27 +111,15 @@ function yatBul(k) {
 
 // ================= İLETİŞİM =================
 
-async function iletisimMesajlari() {
-    try {
-        const sonuc = await wixData.query(ILETISIM_KOLEKSIYON)
-            .descending("_createdDate")
-            .limit(100)
-            .find();
-        console.log("Ham iletişim verisi:", sonuc.items);
-        return sonuc.items.map(k => {
-            const mesaj = alanBul(k, /mesaj|message|not|aciklama|açıklama|konu|subject/i);
-            const tarih = k._createdDate ? new Date(k._createdDate).toLocaleString("tr-TR") : null;
-            return {
-                _id: String(k._id),
-                isim: adSoyadBul(k),
-                email: alanBul(k, /mail|posta/i),
-                mesaj: [mesaj, tarih].filter(Boolean).join(" • ")
-            };
-        });
-    } catch (err) {
-        console.log("İletişim koleksiyon hatası:", err);
-        return [];
-    }
+function iletisimNormalize(k) {
+    const mesaj = alanBul(k, /mesaj|message|not|aciklama|açıklama|konu|subject/i);
+    const tarih = k._createdDate ? new Date(k._createdDate).toLocaleString("tr-TR") : null;
+    return {
+        _id: String(k._id),
+        isim: adSoyadBul(k),
+        email: alanBul(k, /mail|posta/i),
+        mesaj: [mesaj, tarih].filter(Boolean).join(" • ")
+    };
 }
 
 // Kalıba uyan ilk dolu alanı bulur (Wix'in sistem alanlarını atlar)
