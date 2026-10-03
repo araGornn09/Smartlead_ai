@@ -1,17 +1,15 @@
 // WIX SAYFA KODU — Dashboard sayfası > Sayfa Kodu: içindekileri tamamen sil, bunu yapıştır.
-//
-// Giriş için sayfada olması gereken elemanlar (ID'leri):
-//   #sifreInput   → Metin girişi (şifre yazılacak kutu)
-//   #girisButton  → Buton ("Giriş Yap")
-//   #girisHata    → Metin (hata mesajı için, boş bırakılabilir)
+// Sadece Yönetim Paneli'nden giriş yapan yönetici görebilir; giriş yoksa giriş sayfasına yönlendirir.
 
 import { getDashboardData } from 'backend/dashboard.web';
+import { session } from 'wix-storage-frontend';
+import wixLocationFrontend from 'wix-location-frontend';
 
-$w.onReady(function () {
-    // Giriş yapılana kadar listeler gizli
+const GIRIS_URL = '/yonetim-paneli'; // Yönetim Paneli (giriş) sayfasının URL'si
+
+$w.onReady(async function () {
     $w("#repeaterLeads").collapse();
     $w("#repeaterIletisim").collapse();
-    $w("#girisHata").text = "";
 
     // ---------- REZERVASYONLAR ----------
     $w("#repeaterLeads").onItemReady(($item, itemData) => {
@@ -29,42 +27,26 @@ $w.onReady(function () {
         $item("#txtIletisimMesaj").text = itemData.mesaj || "Mesaj Yok";
     });
 
-    // ---------- GİRİŞ ----------
-    $w("#girisButton").onClick(() => girisYap());
-    $w("#sifreInput").onKeyPress((event) => {
-        if (event.key === "Enter") girisYap();
-    });
-});
-
-async function girisYap() {
-    const sifre = $w("#sifreInput").value;
-    if (!sifre) {
-        $w("#girisHata").text = "Lütfen şifreyi girin.";
+    // ---------- GİRİŞ KONTROLÜ ----------
+    const token = session.getItem("adminToken");
+    if (!token) {
+        wixLocationFrontend.to(GIRIS_URL);
         return;
     }
 
-    $w("#girisButton").disable();
-    $w("#girisHata").text = "Kontrol ediliyor...";
-
     try {
-        const sonuc = await getDashboardData(sifre);
-
+        const sonuc = await getDashboardData(token);
         if (!sonuc.basari) {
-            $w("#girisHata").text = "Şifre hatalı.";
+            // Giriş süresi dolmuş veya geçersiz
+            session.removeItem("adminToken");
+            wixLocationFrontend.to(GIRIS_URL);
             return;
         }
-
-        $w("#girisHata").text = "";
-        $w("#sifreInput").collapse();
-        $w("#girisButton").collapse();
         verileriGoster(sonuc);
     } catch (err) {
-        console.log("Giriş hatası:", err);
-        $w("#girisHata").text = "Bir hata oluştu, tekrar deneyin.";
-    } finally {
-        $w("#girisButton").enable();
+        console.log("Veri hatası:", err);
     }
-}
+});
 
 function verileriGoster(sonuc) {
     // Rezervasyonlar (Wix CMS) + chatbot kayıtları (Render API) aynı listede
