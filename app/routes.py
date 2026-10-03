@@ -70,3 +70,28 @@ def leads_listele():
 
     except Exception as e:
         return jsonify({"basari": False, "hata": f"Veriler getirilemedi: {str(e)}"}), 500
+
+@api_bp.route('/dashboard', methods=['GET'])
+@api_admin_required
+def dashboard_verileri():
+    """
+    Wix dashboard sayfası için müşteri kayıtlarını JSON olarak döndürür.
+    Wix repeater'ı her satır için '_id' alanını (string) zorunlu tutar.
+    Erişim: X-API-Key header'ı (Wix backend'i) veya admin oturumu.
+    """
+    try:
+        kayitlar = get_all_leads(current_app)
+        veriler = [
+            {
+                "_id": str(k["id"]),
+                "isim": k["name"],
+                "telefon": k["phone"],
+                "mesaj": k.get("message") or "",
+                "tarih": str(k.get("created_at") or ""),
+            }
+            for k in kayitlar
+        ]
+        return jsonify({"basari": True, "toplam": len(veriler), "data": veriler}), 200
+
+    except Exception as e:
+        return jsonify({"basari": False, "hata": f"Veriler getirilemedi: {str(e)}"}), 500
