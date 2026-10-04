@@ -92,14 +92,17 @@ async function koleksiyonGetir(koleksiyon) {
     }
 }
 
-// Render'daki Python API'sine gizli anahtarla GET isteği atar, JSON verisini döndürür
+// Render'daki Python API'sine gizli anahtarla GET isteği atar, JSON verisini döndürür.
+// Render uykudaysa (ücretsiz plan) 8 sn'de vazgeçer; Wix backend ~14 sn'den uzun beklemez.
 async function chatbotKayitlari() {
     try {
         const apiKey = await getSecret('NAVTERA_API_KEY');
-        const response = await fetch(API_URL, {
-            method: 'get',
-            headers: { 'X-API-Key': apiKey }
-        });
+        const zamanAsimi = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Render zaman aşımı (uyku modunda olabilir)')), 8000));
+        const response = await Promise.race([
+            fetch(API_URL, { method: 'get', headers: { 'X-API-Key': apiKey } }),
+            zamanAsimi
+        ]);
         if (!response.ok) {
             console.log('API hatası:', response.status);
             return [];
